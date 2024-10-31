@@ -130,3 +130,11 @@ Run the test suite:
 ```bash
 php artisan test
 ```
+
+## Postman Link
+
+View the endpoints on Postman using this link:
+
+```bash
+https://documenter.getpostman.com/view/26924959/2sAY4vhNt6
+```
