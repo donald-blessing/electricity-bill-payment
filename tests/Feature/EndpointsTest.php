@@ -3,6 +3,7 @@
 use App\Enums\BillProvider;
 use App\Enums\BillStatus;
 use App\Events\BillCreated;
+use App\Events\LowBalanceDetected;
 use App\Events\PaymentCompleted;
 use App\Models\Bill;
 use App\Models\User;
@@ -81,7 +82,58 @@ test('can logout', function () {
         ->assertJson(['message' => 'Logged out successfully']);
 });
 
+test('can add funds to a wallet', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $wallet = $user->wallet;
+
+    $response = $this->postJson("/api/wallets/$wallet->id/add-funds", [
+        'amount' => 500.00,
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJsonStructure([
+            'wallet',
+            'message',
+        ]);
+});
+
+test('cannot add negative funds to a wallet', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $wallet = $user->wallet;
+
+    $response = $this->postJson("/api/wallets/$wallet->id/add-funds", [
+        'amount' => -50.00,
+    ]);
+
+    $response->assertStatus(422);
+});
+
 test('can verify a new electricity bill', function () {
+    Event::fake();
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    //fund wallet
+    $wallet          = $user->wallet;
+    $wallet->balance = 1000.00;
+    $wallet->save();
+
+    $response = $this->postJson('api/electricity/verify', [
+        'amount'   => 100.00,
+        'provider' => $this->faker->randomElement(BillProvider::toArray()),
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJsonStructure([
+            'message', 'bill',
+        ]);
+    Event::assertDispatched(BillCreated::class);
+});
+test('cannot verify a new electricity bill with low balance', function () {
     Event::fake();
     $user = User::factory()->create();
     $this->actingAs($user);
@@ -93,10 +145,9 @@ test('can verify a new electricity bill', function () {
 
     $response->assertStatus(200)
         ->assertJsonStructure([
-            'message', 'bill',
+            'message',
         ]);
-
-    Event::assertDispatched(BillCreated::class);
+    Event::assertDispatched(LowBalanceDetected::class);
 });
 
 test('cannot verify a bill with invalid amount', function () {
@@ -183,32 +234,4 @@ test('cannot process a payment for a bill that is already paid', function () {
         ->assertJson(['message' => 'Bill has already been paid']);
 });
 
-test('can add funds to a wallet', function () {
-    $user = User::factory()->create();
-    $this->actingAs($user);
 
-    $wallet = $user->wallet;
-
-    $response = $this->postJson("/api/wallets/$wallet->id/add-funds", [
-        'amount' => 50.00,
-    ]);
-
-    $response->assertStatus(200)
-        ->assertJsonStructure([
-            'wallet',
-            'message',
-        ]);
-});
-
-test('cannot add negative funds to a wallet', function () {
-    $user = User::factory()->create();
-    $this->actingAs($user);
-
-    $wallet = $user->wallet;
-
-    $response = $this->postJson("/api/wallets/$wallet->id/add-funds", [
-        'amount' => -50.00,
-    ]);
-
-    $response->assertStatus(422);
-});

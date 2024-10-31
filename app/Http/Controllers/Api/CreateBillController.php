@@ -14,10 +14,17 @@ class CreateBillController extends Controller
         CreateBillRequest $request,
         CreateBillAction $createBillAction
     ): JsonResponse {
-        $bill = $createBillAction->execute(CreateBillData::from($request->validated()));
+        $response = $createBillAction->execute(CreateBillData::from($request->validated()));
+
+        if (isset($bill['message'])) {
+            return response()->json([
+                'message' => $response['message'],
+            ], 422);
+        }
+        
         return response()->json([
             'message' => 'Bill created successfully',
-            'bill'    => $bill,
+            'bill'    => $response,
         ]);
     }
 }
