@@ -16,7 +16,7 @@ class DeductFundsFromWalletAction
         $wallet->balance -= $data->amount;
         $wallet->save();
 
-        if ($wallet->balance < WalletBalance::LOW_BALANCE_THRESHOLD) {
+        if ($wallet->balance < (float) config('settings.low_balance_threshold', WalletBalance::LOW_BALANCE_THRESHOLD)) {
             event(new LowBalanceDetected($wallet));
             ProcessSNSNotification::dispatch($wallet->toArray(), 'low_balance');
         }

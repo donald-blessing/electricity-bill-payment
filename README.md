@@ -111,7 +111,10 @@ Set the following in your .env file:
 
 ```
 SMS_PROVIDER=mock
-SMS_LOW_BALANCE_THRESHOLD=1000
+
+
+### Low Balance Configuration
+LOW_BALANCE_THRESHOLD=1000
 ```
 
 ### Queue Configuration
